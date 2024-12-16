@@ -4,12 +4,12 @@ export const config = {
   matcher: [
     /*
      * Match all paths except for:
-     * 1. /api routes
+     * 1. /api/auth routes (for authentication)
      * 2. /_next (Next.js internals)
      * 3. /static (inside /public)
      * 4. all root files inside /public (e.g. /favicon.ico)
      */
-    "/((?!api|_next|static|[\\w-]+\\.\\w+).*)",
+    "/((?!api/auth|_next|static|[\\w-]+\\.\\w+).*)",
   ],
 };
 
