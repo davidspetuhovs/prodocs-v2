@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import connectMongo from "@/libs/mongoose";
+import Domain from "@/models/Domain";
 
 export const runtime = 'edge';
 
 export async function GET(req) {
   const url = req.nextUrl;
-  const hostname = req.headers.get("host");
-  const baseHostname = process.env.NEXT_PUBLIC_BASE_URL.replace(/https?:\/\//, "");
+  const hostname = url.searchParams.get("domain") || req.headers.get("host");
+  const baseHostname = process.env.NEXT_PUBLIC_BASE_URL?.replace(/https?:\/\//, "") || 'qalileo.com';
 
   // If it's the base hostname, don't do anything
   if (hostname === baseHostname || hostname === `www.${baseHostname}`) {
@@ -13,11 +15,18 @@ export async function GET(req) {
   }
 
   try {
+    await connectMongo();
+    
     // Check if this domain exists in our system
-    const domainCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/domains/status?domain=${hostname}`);
-    const domainData = await domainCheck.json();
+    const domain = await Domain.findOne({ 
+      domain: hostname,
+      status: 'active'
+    });
 
-    return NextResponse.json({ configured: domainData.configured });
+    return NextResponse.json({ 
+      configured: !!domain,
+      verified: domain?.vercelConfig?.verified || false
+    });
   } catch (error) {
     console.error("Error checking domain:", error);
     return NextResponse.json({ configured: false });
