@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import connectMongo from "@/libs/mongoose";
 import Domain from "@/models/Domain";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/libs/next-auth";
 
 export async function GET() {
   try {
