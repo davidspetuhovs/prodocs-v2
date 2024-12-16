@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import connectMongo from "@/libs/mongoose";
 import Company from "@/models/Company";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/libs/next-auth";
 
 // Add user to company
 export async function POST(req, { params }) {
