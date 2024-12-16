@@ -38,7 +38,18 @@ export async function GET() {
       }
     }
 
-    // If no custom domain found or on main domain, find user's domain
+    // If on main domain or no custom domain found, return qalileo.com
+    if (hostname === baseUrl || hostname === `www.${baseUrl}`) {
+      return NextResponse.json({
+        email: session.user.email,
+        domain: 'qalileo.com',
+        isCustomDomain: false,
+        status: null,
+        verified: false
+      });
+    }
+
+    // For any other domain, try to find user's domain
     const userDomain = await Domain.findOne({ 
       user: session.user.id,
       status: 'active'
@@ -51,7 +62,6 @@ export async function GET() {
       status: userDomain?.status || null,
       verified: userDomain?.vercelConfig?.verified || false
     });
-
   } catch (error) {
     console.error("Error fetching user data:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
