@@ -15,16 +15,26 @@ export const config = {
 
 export async function middleware(req) {
   const hostname = req.headers.get("host");
-  const baseHostname = process.env.NEXT_PUBLIC_BASE_URL.replace(/https?:\/\//, "");
+  
+  // Get base URL from request if in production, otherwise use environment variable
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'qalileo.com'  // Hardcode production domain
+    : process.env.NEXT_PUBLIC_BASE_URL?.replace(/https?:\/\//, "") || 'localhost:3000';
 
   // If it's the base hostname, don't do anything
-  if (hostname === baseHostname || hostname === `www.${baseHostname}`) {
+  if (hostname === baseUrl || hostname === `www.${baseUrl}`) {
     return NextResponse.next();
   }
 
   try {
+    // Use the request's protocol and host for the API call
+    const protocol = req.headers.get("x-forwarded-proto") || "http";
+    const apiBase = process.env.NODE_ENV === 'production'
+      ? `https://qalileo.com`
+      : `${protocol}://${hostname}`;
+
     // Check if this domain exists in our system
-    const domainCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/domain/verify?domain=${hostname}`);
+    const domainCheck = await fetch(`${apiBase}/api/domain/verify?domain=${hostname}`);
     const domainData = await domainCheck.json();
 
     if (domainData.configured) {
