@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import connectMongo from "@/libs/mongoose";
 import Company from "@/models/Company";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/libs/next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // Get all companies for the current user
 export async function GET() {
