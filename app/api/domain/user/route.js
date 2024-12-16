@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { headers } from 'next/headers';
 import connectMongo from "@/libs/mongoose";
 import Domain from "@/models/Domain";
 import { getServerSession } from "next-auth";
@@ -11,21 +12,44 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const headersList = headers();
+    const hostname = headersList.get("host");
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'qalileo.com'
+      : process.env.NEXT_PUBLIC_BASE_URL?.replace(/https?:\/\//, "") || 'localhost:3000';
+
     await connectMongo();
 
-    // Find domain for current user
-    const domain = await Domain.findOne({ 
+    // If it's a custom domain, find that specific domain
+    if (hostname !== baseUrl && hostname !== `www.${baseUrl}`) {
+      const domain = await Domain.findOne({ 
+        domain: hostname,
+        status: 'active'
+      });
+
+      if (domain) {
+        return NextResponse.json({
+          email: session.user.email,
+          domain: domain.domain,
+          isCustomDomain: true,
+          status: domain.status,
+          verified: domain.vercelConfig?.verified || false
+        });
+      }
+    }
+
+    // If no custom domain found or on main domain, find user's domain
+    const userDomain = await Domain.findOne({ 
       user: session.user.id,
       status: 'active'
     });
 
-    // Return domain info or default to qalileo.com
     return NextResponse.json({
       email: session.user.email,
-      domain: domain ? domain.domain : 'qalileo.com',
-      isCustomDomain: !!domain,
-      status: domain?.status || null,
-      verified: domain?.vercelConfig?.verified || false
+      domain: userDomain ? userDomain.domain : 'qalileo.com',
+      isCustomDomain: !!userDomain,
+      status: userDomain?.status || null,
+      verified: userDomain?.vercelConfig?.verified || false
     });
 
   } catch (error) {
