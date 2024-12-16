@@ -14,7 +14,6 @@ export const config = {
 };
 
 export async function middleware(req) {
-  const url = req.nextUrl;
   const hostname = req.headers.get("host");
   const baseHostname = process.env.NEXT_PUBLIC_BASE_URL.replace(/https?:\/\//, "");
 
@@ -25,7 +24,7 @@ export async function middleware(req) {
 
   try {
     // Check if this domain exists in our system
-    const domainCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/domains/status?domain=${hostname}`);
+    const domainCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/domain/verify?domain=${hostname}`);
     const domainData = await domainCheck.json();
 
     if (domainData.configured) {
