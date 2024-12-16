@@ -16,7 +16,7 @@ const domainSchema = mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false,
+      required: true,
       index: true,
     },
     status: {
@@ -38,5 +38,9 @@ const domainSchema = mongoose.Schema(
 
 // add plugin that converts mongoose to json
 domainSchema.plugin(toJSON);
+
+// Create indexes
+domainSchema.index({ domain: 1 });
+domainSchema.index({ user: 1 });
 
 export default mongoose.models.Domain || mongoose.model("Domain", domainSchema);

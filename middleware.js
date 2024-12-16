@@ -38,8 +38,17 @@ export async function middleware(req) {
     const domainData = await domainCheck.json();
 
     if (domainData.configured) {
-      // Rewrite to the user's page
-      return NextResponse.rewrite(new URL(`/dashboard`, req.url));
+      // Get the pathname from the URL
+      const pathname = new URL(req.url).pathname;
+      
+      // List of paths that should be accessible via custom domain
+      const allowedPaths = ['/dashboard', '/article'];
+      const requestedPath = allowedPaths.find(path => pathname.startsWith(path));
+
+      if (requestedPath) {
+        // Rewrite to the requested path
+        return NextResponse.rewrite(new URL(pathname, req.url));
+      }
     }
   } catch (error) {
     console.error("Error checking domain:", error);
