@@ -43,37 +43,41 @@ export default async function DocumentationPage({ params }) {
     } else {
       // For public access (subdomain or custom domain)
       try {
-        // First try custom domain
-        const domain = await Domain.findOne({ 
-          domain: hostname,
-          status: 'active'
-        });
-        if (domain) {
-          company = await Company.findOne().populate({
-            path: 'domains',
-            match: { _id: domain._id }
-          });
-        }
-
-        // If not found and it's a subdomain, try subdomain
-        if (!company && hostname.endsWith(`.${baseUrl}`)) {
+        // First check if it's a subdomain
+        if (hostname.endsWith(`.${baseUrl}`)) {
           const slug = hostname.replace(`.${baseUrl}`, '');
           company = await Company.findOne({ slug });
-        }
-
-        // If still not found and it's a custom domain, try finding by domain
-        if (!company && !hostname.endsWith(`.${baseUrl}`)) {
-          // Try to find any active domain that matches
-          const domains = await Domain.find({ 
-            status: 'active',
-            domain: { $regex: new RegExp(hostname.replace(/^docs\./, '')) }
+        } else {
+          // Try to find the domain
+          const domain = await Domain.findOne({ 
+            domain: hostname,
+            status: 'active'
           });
-          
-          if (domains.length > 0) {
-            company = await Company.findOne().populate({
+
+          if (domain) {
+            // Find company by populating domains and checking if this domain exists
+            const companies = await Company.find().populate({
               path: 'domains',
-              match: { _id: { $in: domains.map(d => d._id) } }
+              match: { _id: domain._id }
             });
+            company = companies.find(c => c.domains && c.domains.length > 0);
+          }
+
+          // If still not found and hostname starts with docs.
+          if (!company && hostname.startsWith('docs.')) {
+            const baseDomain = hostname.replace(/^docs\./, '');
+            const domain = await Domain.findOne({ 
+              domain: baseDomain,
+              status: 'active'
+            });
+
+            if (domain) {
+              const companies = await Company.find().populate({
+                path: 'domains',
+                match: { _id: domain._id }
+              });
+              company = companies.find(c => c.domains && c.domains.length > 0);
+            }
           }
         }
 
