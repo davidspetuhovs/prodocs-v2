@@ -10,87 +10,103 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 
 export default async function Docs() {
-  const session = await getServerSession(authOptions);
-  const headersList = headers();
-  const hostname = headersList.get("host");
-  
-  await connectMongo();
-
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? 'qalileo.com'
-    : process.env.NEXT_PUBLIC_BASE_URL?.replace(/https?:\/\//, "") || 'localhost:3000';
-
-  let docs = [];
-  let isAuthenticated = false;
-  let company = null;
-
-  // If authenticated user on main domain
-  if (session && (hostname === baseUrl || hostname === `www.${baseUrl}`)) {
-    isAuthenticated = true;
-    const user = await User.findById(session.user.id).populate('company');
+  try {
+    const session = await getServerSession(authOptions);
+    const headersList = headers();
+    const hostname = headersList.get("host");
     
-    if (user?.company) {
-      company = user.company;
-      docs = await Documentation.find({ company: user.company._id })
-        .sort({ updatedAt: -1 })
-        .select('title slug status updatedAt');
-    }
-  } else {
-    // For public access (subdomain or custom domain)
-    if (hostname.endsWith(`.${baseUrl}`)) {
-      // It's a subdomain
-      const slug = hostname.replace(`.${baseUrl}`, '');
-      company = await Company.findOne({ slug });
+    await connectMongo();
+
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'qalileo.com'
+      : process.env.NEXT_PUBLIC_BASE_URL?.replace(/https?:\/\//, "") || 'localhost:3000';
+
+    let docs = [];
+    let isAuthenticated = false;
+    let company = null;
+
+    // If authenticated user on main domain
+    if (session && (hostname === baseUrl || hostname === `www.${baseUrl}`)) {
+      isAuthenticated = true;
+      const user = await User.findById(session.user.id).populate('company');
+      
+      if (user?.company) {
+        company = user.company;
+        docs = await Documentation.find({ company: user.company._id })
+          .sort({ updatedAt: -1 })
+          .select('title slug status updatedAt');
+      }
     } else {
-      // It's a custom domain
-      company = await Company.findOne({ domain: hostname });
+      // For public access (subdomain or custom domain)
+      try {
+        if (hostname.endsWith(`.${baseUrl}`)) {
+          // It's a subdomain
+          const slug = hostname.replace(`.${baseUrl}`, '');
+          company = await Company.findOne({ slug });
+        } else {
+          // It's a custom domain
+          company = await Company.findOne({ domain: hostname });
+        }
+
+        if (company) {
+          docs = await Documentation.find({ 
+            company: company._id,
+            status: 'published'
+          })
+            .sort({ updatedAt: -1 })
+            .select('title slug updatedAt');
+        }
+      } catch (error) {
+        console.error('Error fetching company or docs:', error);
+        // Continue with empty docs array
+      }
     }
 
-    if (company) {
-      docs = await Documentation.find({ 
-        company: company._id,
-        status: 'published'
-      })
-        .sort({ updatedAt: -1 })
-        .select('title slug updatedAt');
-    }
+    return (
+      <div className="container mx-auto py-10">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold">
+            {company ? `${company.name} Documentation` : 'Documentation'}
+          </h1>
+          {isAuthenticated && (
+            <Link href="/create-docs">
+              <Button>Create New</Button>
+            </Link>
+          )}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {docs.map((doc) => (
+            <Link key={doc._id} href={`/docs/${doc.slug}`}>
+              <Card className="p-4 hover:shadow-lg transition-shadow">
+                <h2 className="font-semibold mb-2">{doc.title}</h2>
+                <div className="flex justify-between items-center text-sm text-muted-foreground">
+                  {isAuthenticated && <span className="capitalize">{doc.status}</span>}
+                  <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
+                </div>
+              </Card>
+            </Link>
+          ))}
+
+          {docs.length === 0 && (
+            <div className="col-span-full text-center py-10 text-muted-foreground">
+              {isAuthenticated 
+                ? "No documentation found. Create your first documentation to get started."
+                : "No published documentation available."
+              }
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('Error in Docs page:', error);
+    return (
+      <div className="container mx-auto py-10">
+        <div className="text-center py-10 text-muted-foreground">
+          Unable to load documentation. Please try again later.
+        </div>
+      </div>
+    );
   }
-
-  return (
-    <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">
-          {company ? `${company.name} Documentation` : 'Documentation'}
-        </h1>
-        {isAuthenticated && (
-          <Link href="/create-docs">
-            <Button>Create New</Button>
-          </Link>
-        )}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {docs.map((doc) => (
-          <Link key={doc._id} href={`/docs/${doc.slug}`}>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <h2 className="font-semibold mb-2">{doc.title}</h2>
-              <div className="flex justify-between items-center text-sm text-muted-foreground">
-                {isAuthenticated && <span className="capitalize">{doc.status}</span>}
-                <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </Card>
-          </Link>
-        ))}
-
-        {docs.length === 0 && (
-          <div className="col-span-full text-center py-10 text-muted-foreground">
-            {isAuthenticated 
-              ? "No documentation found. Create your first documentation to get started."
-              : "No published documentation available."
-            }
-          </div>
-        )}
-      </div>
-    </div>
-  );
 }
