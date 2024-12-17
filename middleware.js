@@ -27,50 +27,12 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // Get the protocol
-  const protocol = req.headers.get("x-forwarded-proto") || "http";
-  const apiBase = process.env.NODE_ENV === 'production'
-    ? `https://${baseUrl}`
-    : `${protocol}://${hostname}`;
-
-  try {
-    // Check if it's a subdomain of qalileo.com
-    const isSubdomain = hostname.endsWith(`.${baseUrl}`);
-    
-    if (isSubdomain) {
-      // If root path, rewrite to /docs
-      if (pathname === '/') {
-        return NextResponse.rewrite(new URL('/docs', req.url));
-      }
-      
-      return NextResponse.next();
-    }
-
-    // For custom domains, verify the domain
-    const domainCheck = await fetch(`${apiBase}/api/domain/verify?domain=${hostname}`);
-    
-    let domainData;
-    try {
-      domainData = await domainCheck.json();
-    } catch (jsonError) {
-      console.error("Error parsing domain verification response:", jsonError);
-      return NextResponse.redirect(new URL(`https://${baseUrl}`));
-    }
-
-    if (domainData && domainData.configured) {
-      // If root path, rewrite to /docs
-      if (pathname === '/') {
-        return NextResponse.rewrite(new URL('/docs', req.url));
-      }
-      
-      return NextResponse.next();
-    }
-
-    // If domain not configured, redirect to main site
-    return NextResponse.redirect(new URL(`https://${baseUrl}`));
-  } catch (error) {
-    console.error("Error in middleware:", error);
-    // On error, redirect to main site
-    return NextResponse.redirect(new URL(`https://${baseUrl}`));
+  // If it's a subdomain or custom domain
+  if (pathname === '/') {
+    // Rewrite root path to /docs for both subdomains and custom domains
+    return NextResponse.rewrite(new URL('/docs', req.url));
   }
+
+  // For all other paths, continue normally
+  return NextResponse.next();
 }
