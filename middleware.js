@@ -48,9 +48,16 @@ export async function middleware(req) {
 
     // For custom domains, verify the domain
     const domainCheck = await fetch(`${apiBase}/api/domain/verify?domain=${hostname}`);
-    const domainData = await domainCheck.json();
+    
+    let domainData;
+    try {
+      domainData = await domainCheck.json();
+    } catch (jsonError) {
+      console.error("Error parsing domain verification response:", jsonError);
+      return NextResponse.redirect(new URL(`https://${baseUrl}`));
+    }
 
-    if (domainData.configured) {
+    if (domainData && domainData.configured) {
       // If root path, rewrite to /docs
       if (pathname === '/') {
         return NextResponse.rewrite(new URL('/docs', req.url));
