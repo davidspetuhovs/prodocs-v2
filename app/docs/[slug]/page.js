@@ -43,26 +43,44 @@ export default async function DocumentationPage({ params }) {
     } else {
       // For public access (subdomain or custom domain)
       try {
+        console.log('Checking hostname:', hostname);
+
         // First try to find by domain
         const domain = await Domain.findOne({ 
           domain: hostname,
           status: 'active'
         });
+        console.log('Domain search result:', domain);
 
         if (domain) {
+          console.log('Found domain, looking for company with ID:', domain.company);
           company = await Company.findById(domain.company);
+          console.log('Company found by domain:', company);
         } else if (hostname.endsWith(`.${baseUrl}`)) {
           // If no domain found, try subdomain
           const slug = hostname.replace(`.${baseUrl}`, '');
+          console.log('No domain found, trying subdomain with slug:', slug);
           company = await Company.findOne({ slug });
+          console.log('Company found by slug:', company);
         }
 
         if (company) {
+          console.log('Found company:', company.name, 'ID:', company._id);
           doc = await Documentation.findOne({ 
             company: company._id,
             slug: params.slug,
             status: 'published'
           }).populate('creator');
+          console.log('Found doc:', doc ? doc.title : null);
+        } else {
+          console.log('No company found for:', hostname);
+        }
+
+        if (company) {
+          if (!doc) {
+            console.log('No doc found for company:', company.name, 'with slug:', params.slug);
+            notFound();
+          }
         }
       } catch (error) {
         console.error('Error fetching company or doc:', error);
