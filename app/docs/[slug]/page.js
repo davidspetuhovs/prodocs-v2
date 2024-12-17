@@ -42,13 +42,20 @@ export default async function DocumentationPage({ params }) {
     } else {
       // For public access (subdomain or custom domain)
       try {
-        if (hostname.endsWith(`.${baseUrl}`)) {
-          // It's a subdomain
+        // First try custom domain
+        company = await Company.findOne({ domain: hostname });
+
+        // If not found and it's a subdomain, try subdomain
+        if (!company && hostname.endsWith(`.${baseUrl}`)) {
           const slug = hostname.replace(`.${baseUrl}`, '');
           company = await Company.findOne({ slug });
-        } else {
-          // It's a custom domain
-          company = await Company.findOne({ domain: hostname });
+        }
+
+        // If still not found and it's a custom domain, try finding by domain
+        if (!company && !hostname.endsWith(`.${baseUrl}`)) {
+          // Try to find any company that has this domain configured
+          const allCompanies = await Company.find({ domain: { $exists: true, $ne: null } });
+          company = allCompanies.find(c => hostname.includes(c.domain.replace(/^docs\./, '')));
         }
 
         if (company) {
