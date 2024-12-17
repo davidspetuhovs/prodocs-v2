@@ -50,8 +50,8 @@ export default async function Docs() {
         console.log('Domain search result:', domain);
 
         if (domain) {
-          console.log('Found domain, looking for company with ID:', domain.company);
-          company = await Company.findById(domain.company);
+          console.log('Found domain, looking for company with domain ID:', domain._id);
+          company = await Company.findOne({ domain: domain._id });
           console.log('Company found by domain:', company);
         } else if (hostname.endsWith(`.${baseUrl}`)) {
           // If no domain found, try subdomain
