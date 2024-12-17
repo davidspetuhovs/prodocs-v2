@@ -5,6 +5,7 @@ import connectMongo from "@/libs/mongoose";
 import Documentation from "@/models/Documentation";
 import User from "@/models/User";
 import Company from "@/models/Company";
+import Domain from "@/models/Domain"; // Added Domain model
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
@@ -40,7 +41,16 @@ export default async function Docs() {
       // For public access (subdomain or custom domain)
       try {
         // First try custom domain
-        company = await Company.findOne({ domain: hostname });
+        const domain = await Domain.findOne({ 
+          domain: hostname,
+          status: 'active'
+        });
+        if (domain) {
+          company = await Company.findOne().populate({
+            path: 'domains',
+            match: { _id: domain._id }
+          });
+        }
 
         // If not found and it's a subdomain, try subdomain
         if (!company && hostname.endsWith(`.${baseUrl}`)) {
@@ -50,9 +60,18 @@ export default async function Docs() {
 
         // If still not found and it's a custom domain, try finding by domain
         if (!company && !hostname.endsWith(`.${baseUrl}`)) {
-          // Try to find any company that has this domain configured
-          const allCompanies = await Company.find({ domain: { $exists: true, $ne: null } });
-          company = allCompanies.find(c => hostname.includes(c.domain.replace(/^docs\./, '')));
+          // Try to find any active domain that matches
+          const domains = await Domain.find({ 
+            status: 'active',
+            domain: { $regex: new RegExp(hostname.replace(/^docs\./, '')) }
+          });
+          
+          if (domains.length > 0) {
+            company = await Company.findOne().populate({
+              path: 'domains',
+              match: { _id: { $in: domains.map(d => d._id) } }
+            });
+          }
         }
 
         if (company) {
