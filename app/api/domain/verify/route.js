@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 export const runtime = 'edge';
 
 export async function GET(req) {
-  const url = req.nextUrl;
   const hostname = req.headers.get("host");
   const baseHostname = process.env.NODE_ENV === 'production' 
     ? 'qalileo.com'

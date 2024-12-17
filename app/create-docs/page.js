@@ -20,6 +20,17 @@ export default function CreateDocs() {
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState("draft");
   const [company, setCompany] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   useEffect(() => {
     const fetchUserCompany = async () => {
@@ -29,11 +40,7 @@ export default function CreateDocs() {
           const data = await response.json();
           setCompany(data.data);
         } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to fetch company information",
-            variant: "destructive",
-          });
+          setError("Failed to fetch company information");
         }
       }
     };
@@ -76,11 +83,7 @@ export default function CreateDocs() {
 
       router.push(`/docs/${result.data.slug}`);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
