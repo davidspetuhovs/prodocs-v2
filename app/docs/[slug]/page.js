@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { headers } from "next/headers";
 import { authOptions } from "@/libs/next-auth";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -8,18 +9,54 @@ import Link from "next/link";
 import connectMongo from "@/libs/mongoose";
 import Documentation from "@/models/Documentation";
 import User from "@/models/User";
+import Company from "@/models/Company";
 
 export default async function DocumentationPage({ params }) {
   const session = await getServerSession(authOptions);
-  await connectMongo();
-  
-  // Get user with populated company
-  const user = await User.findById(session.user.id).populate('company');
-  
-  const doc = await Documentation.findOne({
-    company: user.company._id,
-    slug: params.slug
-  }).populate('creator');
+  const headersList = headers();
+  const hostname = headersList.get("host");
+   
+  await connectMongo(); //test
+
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'qalileo.com'
+    : process.env.NEXT_PUBLIC_BASE_URL?.replace(/https?:\/\//, "") || 'localhost:3000';
+
+  let doc = null;
+  let isAuthenticated = false;
+  let company = null;
+
+  // If authenticated user on main domain
+  if (session && (hostname === baseUrl || hostname === `www.${baseUrl}`)) {
+    isAuthenticated = true;
+    const user = await User.findById(session.user.id).populate('company');
+    
+    if (user?.company) {
+      company = user.company;
+      doc = await Documentation.findOne({
+        company: user.company._id,
+        slug: params.slug
+      }).populate('creator');
+    }
+  } else {
+    // For public access (subdomain or custom domain)
+    if (hostname.endsWith(`.${baseUrl}`)) {
+      // It's a subdomain
+      const slug = hostname.replace(`.${baseUrl}`, '');
+      company = await Company.findOne({ slug });
+    } else {
+      // It's a custom domain
+      company = await Company.findOne({ domain: hostname });
+    }
+
+    if (company) {
+      doc = await Documentation.findOne({ 
+        company: company._id,
+        slug: params.slug,
+        status: 'published'
+      }).populate('creator');
+    }
+  }
 
   if (!doc) {
     notFound();
@@ -31,9 +68,11 @@ export default async function DocumentationPage({ params }) {
         <div>
           <div className="flex items-center gap-4 mb-2">
             <h1 className="text-3xl font-bold">{doc.title}</h1>
-            <Badge variant={doc.status === 'published' ? 'default' : 'secondary'}>
-              {doc.status}
-            </Badge>
+            {isAuthenticated && (
+              <Badge variant={doc.status === 'published' ? 'default' : 'secondary'}>
+                {doc.status}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Created by {doc.creator.name}</span>
@@ -42,7 +81,7 @@ export default async function DocumentationPage({ params }) {
           </div>
         </div>
         
-        {session?.user?.id === doc.creator._id.toString() && (
+        {isAuthenticated && session?.user?.id === doc.creator._id.toString() && (
           <Link href={`/docs/${doc.slug}/edit`}>
             <Button variant="outline">Edit Documentation</Button>
           </Link>
