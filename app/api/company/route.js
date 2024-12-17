@@ -1,68 +1,92 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/libs/next-auth";
 import connectMongo from "@/libs/mongoose";
 import Company from "@/models/Company";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import User from "@/models/User";
 
-// Get all companies for the current user
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectMongo();
-    const companies = await Company.find({
-      "users.user": session.user.id
-    }).populate('users.user', 'email name');
-
-    return NextResponse.json(companies);
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-// Create a new company
 export async function POST(req) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  const { id } = session.user;
+  const body = await req.json();
+  const { name, logo } = body;
+
+  if (!name) {
+    return NextResponse.json({ error: "Company name is required" }, { status: 400 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await connectMongo();
+
+    const user = await User.findById(id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const body = await req.json();
-    const { name, slug } = body;
-
-    if (!name || !slug) {
+    // Check if user already has a company
+    if (user.company) {
       return NextResponse.json(
-        { error: "Name and slug are required" },
+        { error: "User already has a company" },
         { status: 400 }
       );
     }
 
-    await connectMongo();
+    // Create slug from company name
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    // Check if company with slug already exists
+    // Check if company with this slug already exists
     const existingCompany = await Company.findOne({ slug });
     if (existingCompany) {
       return NextResponse.json(
-        { error: "Company with this slug already exists" },
+        { error: "Company with this name already exists" },
         { status: 400 }
       );
     }
 
-    // Create company with current user as owner
-    const company = await Company.create({
+    // Create new company
+    const company = new Company({
       name,
       slug,
-      users: [{
-        user: session.user.id,
-        role: "owner"
-      }]
+      logo,
+      owner: id
     });
 
-    return NextResponse.json(company);
+    await company.save();
+
+    // Update user with company reference
+    user.company = company._id;
+    await user.save();
+
+    return NextResponse.json({ data: company }, { status: 201 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  try {
+    await connectMongo();
+    const user = await User.findById(session.user.id).populate('company');
+    
+    if (!user?.company) {
+      return NextResponse.json({ data: null });
+    }
+
+    return NextResponse.json({ data: user.company });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

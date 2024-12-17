@@ -19,32 +19,14 @@ const companySchema = mongoose.Schema(
       type: String,
       trim: true,
     },
-    users: [{
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-      role: {
-        type: String,
-        enum: ["owner", "admin", "member"],
-        default: "member",
-        required: true,
-      }
-    }],
-    settings: {
-      type: Object,
-      default: {},
-    },
-    status: {
-      type: String,
-      enum: ["active", "inactive"],
-      default: "active",
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     }
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
   }
 );
 
@@ -60,6 +42,7 @@ companySchema.plugin(toJSON);
 
 // Create indexes
 companySchema.index({ slug: 1 });
-companySchema.index({ "users.user": 1 });
 
-export default mongoose.models.Company || mongoose.model("Company", companySchema);
+const Company = mongoose.models.Company || mongoose.model("Company", companySchema);
+
+export default Company;
