@@ -1,8 +1,4 @@
 import { NextResponse } from "next/server";
-import connectMongo from "@/libs/mongoose";
-import Domain from "@/models/Domain";
-
-export const runtime = 'edge';
 
 export async function GET(req) {
   const hostname = req.headers.get("host");
@@ -16,8 +12,11 @@ export async function GET(req) {
   }
 
   try {
-    await connectMongo();
-    const domain = await Domain.findOne({ domain: hostname });
+    // Check if this domain exists in our system
+    const domainCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/domain?domain=${hostname}`);
+    const domains = await domainCheck.json();
+    const domain = Array.isArray(domains) ? domains.find(d => d.domain === hostname) : null;
+
     return NextResponse.json({ configured: !!domain });
   } catch (error) {
     console.error("Error checking domain:", error);
