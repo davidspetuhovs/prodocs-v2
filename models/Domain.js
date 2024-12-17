@@ -13,12 +13,6 @@ const domainSchema = mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
     status: {
       type: String,
       enum: ["pending", "active", "error"],
@@ -41,6 +35,7 @@ domainSchema.plugin(toJSON);
 
 // Create indexes
 domainSchema.index({ domain: 1 });
-domainSchema.index({ user: 1 });
 
-export default mongoose.models.Domain || mongoose.model("Domain", domainSchema);
+const Domain = mongoose.models.Domain || mongoose.model("Domain", domainSchema);
+
+export default Domain;

@@ -31,7 +31,10 @@ export function OnboardingForm({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          slug: formData.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+        }),
       })
 
       const data = await response.json()
@@ -41,7 +44,7 @@ export function OnboardingForm({
       }
       
       toast.success("Company created successfully!")
-      router.push(`/${formData.slug}/dashboard`)
+      router.push(`/dashboard`)
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -51,10 +54,20 @@ export function OnboardingForm({
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    if (name === "name") {
+      // Auto-generate slug from company name
+      const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      setFormData(prev => ({
+        ...prev,
+        name: value,
+        slug
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
   }
 
   return (
@@ -66,9 +79,9 @@ export function OnboardingForm({
               <div className="flex h-8 w-8 items-center justify-center rounded-md">
                 <GalleryVerticalEnd className="size-6" />
               </div>
-              <span className="sr-only">Acme Inc.</span>
+              <span className="sr-only">Qalileo</span>
             </a>
-            <h1 className="text-xl font-bold">Welcome to the Product</h1>
+            <h1 className="text-xl font-bold">Welcome to Qalileo</h1>
           </div>
           <div className="flex flex-col gap-6">
             <div className="grid gap-2">
@@ -77,7 +90,7 @@ export function OnboardingForm({
                 id="name"
                 name="name"
                 type="text" 
-                placeholder="Company Name" 
+                placeholder="Acme Inc." 
                 required 
                 value={formData.name}
                 onChange={handleChange}

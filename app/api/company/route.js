@@ -14,10 +14,10 @@ export async function POST(req) {
 
   const { id } = session.user;
   const body = await req.json();
-  const { name, logo } = body;
+  const { name, slug } = body;
 
-  if (!name) {
-    return NextResponse.json({ error: "Company name is required" }, { status: 400 });
+  if (!name || !slug) {
+    return NextResponse.json({ error: "Company name and slug are required" }, { status: 400 });
   }
 
   try {
@@ -36,14 +36,11 @@ export async function POST(req) {
       );
     }
 
-    // Create slug from company name
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-
     // Check if company with this slug already exists
     const existingCompany = await Company.findOne({ slug });
     if (existingCompany) {
       return NextResponse.json(
-        { error: "Company with this name already exists" },
+        { error: "Company with this slug already exists" },
         { status: 400 }
       );
     }
@@ -51,9 +48,7 @@ export async function POST(req) {
     // Create new company
     const company = new Company({
       name,
-      slug,
-      logo,
-      owner: id
+      slug
     });
 
     await company.save();
@@ -64,6 +59,7 @@ export async function POST(req) {
 
     return NextResponse.json({ data: company }, { status: 201 });
   } catch (e) {
+    console.error(e);
     return NextResponse.json(
       { error: "Something went wrong" },
       { status: 500 }
@@ -88,6 +84,7 @@ export async function GET() {
 
     return NextResponse.json({ data: user.company });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

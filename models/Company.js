@@ -19,10 +19,10 @@ const companySchema = mongoose.Schema(
       type: String,
       trim: true,
     },
-    owner: {
+    domain: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+      ref: "Domain",
+      required: false // Making domain optional
     }
   },
   {

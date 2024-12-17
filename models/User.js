@@ -20,6 +20,8 @@ const userSchema = mongoose.Schema(
     company: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
+      required: false,
+      unique: true // One user can only have one company
     },
     // Used in the Stripe webhook to identify the user in Stripe and later create Customer Portal or prefill user credit card details
     customerId: {
@@ -43,11 +45,16 @@ const userSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
   }
 );
 
-// add plugin that converts mongoose to json
+// Add plugin that converts mongoose to json
 userSchema.plugin(toJSON);
 
-export default mongoose.models.User || mongoose.model("User", userSchema);
+// Create indexes
+userSchema.index({ email: 1 });
+userSchema.index({ company: 1 });
+
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+export default User;
