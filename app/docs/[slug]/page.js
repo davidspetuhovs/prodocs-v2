@@ -43,41 +43,21 @@ export default async function DocumentationPage({ params }) {
     } else {
       // For public access (subdomain or custom domain)
       try {
-        // First check if it's a subdomain
+        // Try to find by subdomain first
         if (hostname.endsWith(`.${baseUrl}`)) {
           const slug = hostname.replace(`.${baseUrl}`, '');
           company = await Company.findOne({ slug });
-        } else {
-          // Try to find the domain
+        }
+
+        // If not found by subdomain, try to find by domain
+        if (!company) {
           const domain = await Domain.findOne({ 
-            domain: hostname,
+            domain: { $in: [hostname, hostname.replace('docs.', '')] },
             status: 'active'
           });
-
+          
           if (domain) {
-            // Find company by populating domains and checking if this domain exists
-            const companies = await Company.find().populate({
-              path: 'domains',
-              match: { _id: domain._id }
-            });
-            company = companies.find(c => c.domains && c.domains.length > 0);
-          }
-
-          // If still not found and hostname starts with docs.
-          if (!company && hostname.startsWith('docs.')) {
-            const baseDomain = hostname.replace(/^docs\./, '');
-            const domain = await Domain.findOne({ 
-              domain: baseDomain,
-              status: 'active'
-            });
-
-            if (domain) {
-              const companies = await Company.find().populate({
-                path: 'domains',
-                match: { _id: domain._id }
-              });
-              company = companies.find(c => c.domains && c.domains.length > 0);
-            }
+            company = await Company.findOne({ slug: domain.company });
           }
         }
 
