@@ -5,7 +5,7 @@
  * Key Features:
  * 1. Path matching configuration
  * 2. Domain-based routing
- * 3. Public path rewriting for custom domains
+ * 3. Internal path rewriting for custom domains
  */
 
 import { NextResponse } from "next/server";
@@ -13,12 +13,6 @@ import { NextResponse } from "next/server";
 /**
  * Middleware Configuration
  * Defines which paths should be processed by the middleware
- * 
- * Excluded Paths:
- * - /api/* - API routes
- * - /_next/* - Next.js internal routes
- * - /static/* - Static files in public directory
- * - Root files in public (e.g., favicon.ico, robots.txt)
  */
 export const config = {
   matcher: [
@@ -32,7 +26,7 @@ export const config = {
  * 
  * Behavior:
  * 1. Main domain (qalileo.com) - Normal routing
- * 2. Subdomains/Custom domains - Only allow access to /public paths
+ * 2. Subdomains/Custom domains - Internally rewrite paths to /public
  * 
  * @example
  * Main domain:
@@ -40,9 +34,8 @@ export const config = {
  * qalileo.com/docs -> Shows docs page
  * 
  * Subdomain/Custom domain:
- * docs.example.com/ -> Redirects to docs.example.com/public
- * docs.example.com/public/* -> Shows public content
- * docs.example.com/dashboard -> Redirects to /public
+ * docs.example.com/ -> Internally rewrites to /public
+ * docs.example.com/docs -> Internally rewrites to /public/docs
  * 
  * @param {Request} req - Incoming request object
  * @returns {NextResponse} Response with appropriate routing
@@ -63,17 +56,9 @@ export async function middleware(req) {
   }
 
   // For custom domains and subdomains:
-  // 1. Redirect root to /public
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/public', req.url));
-  }
-
-  // 2. Allow access only to /public paths
-  if (!pathname.startsWith('/public')) {
-    // Redirect any non-public paths to /public
-    return NextResponse.redirect(new URL('/public', req.url));
-  }
-
-  // Allow /public paths to proceed normally
-  return NextResponse.next();
+  // Internally rewrite all paths to their /public equivalent
+  const newUrl = new URL(req.url);
+  newUrl.pathname = pathname === '/' ? '/public' : `/public${pathname}`;
+  
+  return NextResponse.rewrite(newUrl);
 }
