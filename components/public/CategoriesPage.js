@@ -17,8 +17,8 @@ export default function CategoriesPage() {
         const response = await apiClient.get("/public/docs");
         console.log('API Response:', response);
         
-        // response.data is already the array we need
-        setDocs(Array.isArray(response.data) ? response.data : []);
+        // Set the response directly since it's already the array we need
+        setDocs(response || []);
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching public docs:", error);
