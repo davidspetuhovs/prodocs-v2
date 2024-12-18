@@ -51,7 +51,6 @@ export default function CategoriesPage() {
       {/* Documentation Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {docs.map((doc) => {
-          console.log('Rendering doc:', doc);
           return (
             <Link key={doc.id} href={`/docs/${doc.slug}`}>
               <Card className="p-4 hover:shadow-lg transition-shadow">
