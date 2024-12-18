@@ -79,10 +79,11 @@ export async function POST(req) {
       slug
     });
 
-    await company.save();
-
     // Associate company with user and save
     user.company = company._id;
+
+    // Save company and user
+    await company.save();
     await user.save();
 
     return NextResponse.json({ data: company }, { status: 201 });
