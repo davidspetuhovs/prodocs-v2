@@ -67,7 +67,8 @@ export async function GET(req) {
 
     console.log('Found docs:', docs);
 
-    return NextResponse.json({ data: docs });
+    // Return the docs array directly
+    return NextResponse.json(docs);
   } catch (error) {
     console.error('Error fetching public documentation:', error);
     return NextResponse.json(

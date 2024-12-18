@@ -12,12 +12,13 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     const fetchPublicDocs = async () => {
-      console.log('Starting to fetch docs...');
       try {
+        console.log('Starting to fetch docs...');
         const response = await apiClient.get("/public/docs");
         console.log('API Response:', response);
         
-        const docsData = response.data?.data || [];
+        // The data is directly in response.data, not in response.data.data
+        const docsData = response.data || [];
         console.log('Docs data to be set:', docsData);
         
         setDocs(docsData);
