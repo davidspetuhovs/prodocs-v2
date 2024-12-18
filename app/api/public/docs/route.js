@@ -63,7 +63,7 @@ export async function GET(req) {
       status: 'published'
     })
       .sort({ updatedAt: -1 })
-      .select('id title slug updatedAt'); 
+      .select('title slug updatedAt'); 
 
     console.log('Found docs:', docs);
 

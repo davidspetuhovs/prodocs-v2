@@ -13,11 +13,7 @@ export default function CategoriesPage() {
   useEffect(() => {
     const fetchPublicDocs = async () => {
       try {
-        console.log('Starting to fetch docs...');
         const response = await apiClient.get("/public/docs");
-        console.log('API Response:', response);
-        
-        // Set the response directly since it's already the array we need
         setDocs(response || []);
         setIsLoading(false);
       } catch (error) {
