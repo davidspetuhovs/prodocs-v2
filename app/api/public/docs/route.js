@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import connectMongo from "@/libs/mongoose";
 import Company from "@/models/Company";
 import Documentation from "@/models/Documentation";
+import Domain from "@/models/Domain";
 
 /**
  * GET handler for public documentation
@@ -32,18 +33,24 @@ export async function GET(req) {
       company = await Company.findOne();
     } else {
       // Production company identification logic:
-      // 1. First checks if it's a subdomain (e.g., company.qalileo.com)
-      // 2. If not, checks if it's a custom domain
-      if (hostname.endsWith(`.${baseUrl}`)) {
+      // 1. First check if it's a custom domain
+      // 2. If not, check if it's a subdomain
+      const domain = await Domain.findOne({ 
+        domain: hostname,
+        status: 'active'
+      });
+
+      if (domain) {
+        company = await Company.findOne({ domain: domain._id });
+      } else if (hostname.endsWith(`.${baseUrl}`)) {
         const slug = hostname.replace(`.${baseUrl}`, '');
         company = await Company.findOne({ slug });
-      } else {
-        company = await Company.findOne({ domain: hostname });
       }
     }
 
     // Return 404 if company not found
     if (!company) {
+      console.log('Company not found for hostname:', hostname);
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
