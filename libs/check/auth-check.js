@@ -22,6 +22,5 @@ export async function requireCompany() {
   if (!session.user.company) {
     redirect("/onboarding");
   }
-
   return session;
 }

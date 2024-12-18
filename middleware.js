@@ -5,7 +5,7 @@
  * Key Features:
  * 1. Path matching configuration
  * 2. Domain-based routing
- * 3. Root path rewriting for documentation
+ * 3. Internal path rewriting for custom domains
  */
 
 import { NextResponse } from "next/server";
@@ -13,22 +13,6 @@ import { NextResponse } from "next/server";
 /**
  * Middleware Configuration
  * Defines which paths should be processed by the middleware
- * 
- * Excluded Paths:
- * - /api/* - API routes
- * - /_next/* - Next.js internal routes
- * - /static/* - Static files in public directory
- * - Root files in public (e.g., favicon.ico, robots.txt)
- * 
- * @example Matched paths:
- * - /
- * - /docs
- * - /dashboard
- * 
- * @example Excluded paths:
- * - /api/auth
- * - /_next/static
- * - /favicon.ico
  */
 export const config = {
   matcher: [
@@ -42,8 +26,7 @@ export const config = {
  * 
  * Behavior:
  * 1. Main domain (qalileo.com) - Normal routing
- * 2. Subdomains (*.qalileo.com) - Redirects root to /docs
- * 3. Custom domains - Redirects root to /docs
+ * 2. Subdomains/Custom domains - Internally rewrite paths to /public
  * 
  * @example
  * Main domain:
@@ -51,15 +34,16 @@ export const config = {
  * qalileo.com/docs -> Shows docs page
  * 
  * Subdomain/Custom domain:
- * docs.example.com/ -> Redirects to docs.example.com/docs
- * docs.example.com/docs -> Shows docs page
+ * docs.example.com/ -> Internally rewrites to /public
+ * docs.example.com/docs -> Internally rewrites to /public/docs
  * 
  * @param {Request} req - Incoming request object
  * @returns {NextResponse} Response with appropriate routing
  */
 export async function middleware(req) {
   const hostname = req.headers.get("host");
-  const pathname = new URL(req.url).pathname;
+  const url = new URL(req.url);
+  const { pathname } = url;
   
   // Determine base URL based on environment
   const baseUrl = process.env.NODE_ENV === 'production' 
@@ -71,12 +55,10 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // Handle subdomain and custom domain root paths
-  if (pathname === '/') {
-    // Redirect root to /docs for better UX
-    return NextResponse.rewrite(new URL('/docs', req.url));
-  }
-
-  // Allow all other paths to proceed normally
-  return NextResponse.next();
+  // For custom domains and subdomains:
+  // Internally rewrite all paths to their /public equivalent
+  const newUrl = new URL(req.url);
+  newUrl.pathname = pathname === '/' ? '/public' : `/public${pathname}`;
+  
+  return NextResponse.rewrite(newUrl);
 }

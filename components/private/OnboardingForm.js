@@ -4,13 +4,13 @@ import { GalleryVerticalEnd } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
-
+import apiClient from "@/libs/api"
 import { cn } from "@/libs/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function OnboardingForm({
+export default function OnboardingForm({
   className,
   ...props
 }) {
@@ -26,27 +26,15 @@ export function OnboardingForm({
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/company", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          slug: formData.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Something went wrong")
-      }
+      const { data } = await apiClient.post("/api/company", {
+        name: formData.name,
+        slug: formData.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      });
       
       toast.success("Company created successfully!")
       router.push(`/dashboard`)
     } catch (error) {
-      toast.error(error.message)
+      toast.error(error.message || "Something went wrong")
     } finally {
       setIsLoading(false)
     }

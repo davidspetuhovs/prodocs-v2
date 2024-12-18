@@ -3,40 +3,6 @@ import connectMongo from "@/libs/mongoose";
 import Domain from "@/models/Domain";
 
 /**
- * Retrieves all domain configurations with associated user information
- * 
- * @route GET /api/domain
- * @access Private - Admin only
- * 
- * @example Successful response:
- * [
- *   {
- *     "_id": "507f1f77bcf86cd799439011",
- *     "domain": "docs.example.com",
- *     "status": "active",
- *     "vercelConfig": {
- *       "name": "docs.example.com",
- *       "apexName": "example.com",
- *       ...
- *     },
- *     "user": {
- *       "_id": "507f1f77bcf86cd799439012",
- *       "email": "user@example.com"
- *     }
- *   }
- * ]
- */
-export async function GET() {
-  try {
-    await connectMongo();
-    const domains = await Domain.find().populate('user', 'email');
-    return NextResponse.json(domains);
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-/**
  * Adds a new custom domain to both Vercel and the application database
  * 
  * @route POST /api/domain

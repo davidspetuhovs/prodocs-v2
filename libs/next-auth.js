@@ -1,9 +1,11 @@
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import mongoose from "mongoose";
 import config from "@/config";
-import connectMongo from "./mongo";
-import User from "@/models/User"; // Assuming the User model is defined in this file
+import clientPromise from "./mongo";
+import connectMongo from "./mongoose";
+import User from "@/models/User";
 
 export const authOptions = {
   // Set any random key in .env.local
@@ -25,7 +27,7 @@ export const authOptions = {
     }),
     // Follow the "Login with Email" tutorial to set up your email server
     // Requires a MongoDB database. Set MONOGODB_URI env variable.
-    ...(connectMongo
+    ...(process.env.MONGODB_URI
       ? [
           EmailProvider({
             server: {
@@ -42,17 +44,21 @@ export const authOptions = {
       : []),
   ],
   // New users will be saved in Database (MongoDB Atlas). Each user (model) has some fields like name, email, image, etc..
-  // Requires a MongoDB database. Set MONOGODB_URI env variable.
-  // Learn more about the model type: https://next-auth.js.org/v3/adapters/models
-  ...(connectMongo && { adapter: MongoDBAdapter(connectMongo) }),
-
+  adapter: MongoDBAdapter(clientPromise),
   callbacks: {
     session: async ({ session, token }) => {
       if (session?.user) {
         session.user.id = token.sub;
-        // Fetch user data including company only once during session creation
-        const user = await User.findById(token.sub).select('company').lean();
-        session.user.company = user?.company ? user.company.toString() : null;
+        try {
+          if (mongoose.connection.readyState !== 1) {
+            await connectMongo();
+          }
+          const user = await User.findById(token.sub).select('company').lean();
+          session.user.company = user?.company ? user.company.toString() : null;
+        } catch (error) {
+          console.error('Error fetching user company:', error);
+          session.user.company = null;
+        }
       }
       return session;
     },
@@ -61,8 +67,6 @@ export const authOptions = {
     strategy: "jwt",
   },
   theme: {
-    // Add you own logo below. Recommended size is rectangle (i.e. 200x50px) and show your logo + name.
-    // It will be used in the login flow to display your logo. If you don't add it, it will look faded.
     logo: `https://${config.domainName}/logoAndName.png`,
   },
 };
