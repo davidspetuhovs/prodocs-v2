@@ -46,7 +46,7 @@ export const authOptions = {
   // New users will be saved in Database (MongoDB Atlas). Each user (model) has some fields like name, email, image, etc..
   adapter: MongoDBAdapter(clientPromise),
   callbacks: {
-    session: async ({ session, token }) => {
+    session: async ({ session, token, req }) => {
       if (session?.user) {
         session.user.id = token.sub;
         try {
@@ -55,8 +55,13 @@ export const authOptions = {
           }
           const user = await User.findById(token.sub).select('company').lean();
           session.user.company = user?.company ? user.company.toString() : null;
+
+          // Add host information to session for custom domain support
+          if (req?.headers?.host) {
+            session.host = req.headers.host;
+          }
         } catch (error) {
-          console.error('Error fetching user company:', error);
+          console.error('Error fetching user session data:', error);
           session.user.company = null;
         }
       }
@@ -67,6 +72,9 @@ export const authOptions = {
     strategy: "jwt",
   },
   theme: {
-    logo: `https://${config.domainName}/logoAndName.png`,
+    logo: (req) => {
+      const host = req?.headers?.host || config.domainName;
+      return `https://${host}/logoAndName.png`;
+    },
   },
 };
