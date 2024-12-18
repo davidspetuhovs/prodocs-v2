@@ -3,6 +3,7 @@ import EmailProvider from "next-auth/providers/email";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import config from "@/config";
 import connectMongo from "./mongo";
+import User from "@/models/User"; // Assuming the User model is defined in this file
 
 export const authOptions = {
   // Set any random key in .env.local
@@ -49,6 +50,9 @@ export const authOptions = {
     session: async ({ session, token }) => {
       if (session?.user) {
         session.user.id = token.sub;
+        // Fetch user data including company only once during session creation
+        const user = await User.findById(token.sub).select('company').lean();
+        session.user.company = user?.company ? user.company.toString() : null;
       }
       return session;
     },
