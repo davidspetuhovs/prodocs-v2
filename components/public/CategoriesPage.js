@@ -12,9 +12,15 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     const fetchPublicDocs = async () => {
+      console.log('Starting to fetch docs...');
       try {
         const response = await apiClient.get("/public/docs");
-        setDocs(response.data?.data || []);
+        console.log('API Response:', response);
+        
+        const docsData = response.data?.data || [];
+        console.log('Docs data to be set:', docsData);
+        
+        setDocs(docsData);
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching public docs:", error);
@@ -50,16 +56,19 @@ export default function CategoriesPage() {
 
       {/* Documentation Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {docs.map((doc) => (
-          <Link key={doc._id} href={`/docs/${doc.slug}`}>
-            <Card className="p-4 hover:shadow-lg transition-shadow">
-              <h2 className="font-semibold mb-2">{doc.title}</h2>
-              <div className="flex justify-between items-center text-sm text-muted-foreground">
-                <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </Card>
-          </Link>
-        ))}
+        {docs.map((doc) => {
+          console.log('Rendering doc:', doc);
+          return (
+            <Link key={doc.id || doc._id} href={`/docs/${doc.slug}`}>
+              <Card className="p-4 hover:shadow-lg transition-shadow">
+                <h2 className="font-semibold mb-2">{doc.title}</h2>
+                <div className="flex justify-between items-center text-sm text-muted-foreground">
+                  <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
+                </div>
+              </Card>
+            </Link>
+          );
+        })}
 
         {/* Empty state message */}
         {docs.length === 0 && (

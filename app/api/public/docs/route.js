@@ -54,6 +54,8 @@ export async function GET(req) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
+    console.log('Found company:', { id: company._id, name: company.name });
+
     // Fetch only published documentation for the company
     // Sorted by last update, returning essential fields only
     const docs = await Documentation.find({
@@ -61,7 +63,9 @@ export async function GET(req) {
       status: 'published'
     })
       .sort({ updatedAt: -1 })
-      .select('title slug updatedAt'); // Only select needed fields
+      .select('id title slug updatedAt'); 
+
+    console.log('Found docs:', docs);
 
     return NextResponse.json({ data: docs });
   } catch (error) {
