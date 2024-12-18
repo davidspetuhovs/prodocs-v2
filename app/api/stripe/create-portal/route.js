@@ -5,7 +5,34 @@ import connectMongo from "@/libs/mongoose";
 import { createCustomerPortal } from "@/libs/stripe";
 import User from "@/models/User";
 
+/**
+ * Creates a Stripe Customer Portal session for managing subscriptions
+ * 
+ * @route POST /api/stripe/create-portal
+ * @access Private - Requires authentication and existing Stripe customer
+ * 
+ * @example Request body:
+ * {
+ *   "returnUrl": "https://example.com/account"  // URL to return to after leaving the portal
+ * }
+ * 
+ * @example Successful response:
+ * {
+ *   "url": "https://billing.stripe.com/session/xxxxx"  // Stripe Customer Portal URL
+ * }
+ * 
+ * @example Error - No billing account:
+ * {
+ *   "error": "You don't have a billing account yet. Make a purchase first."
+ * }
+ * 
+ * @example Error - Missing return URL:
+ * {
+ *   "error": "Return URL is required"
+ * }
+ */
 export async function POST(req) {
+  // Verify user authentication
   const session = await getServerSession(authOptions);
 
   if (session) {
@@ -13,9 +40,9 @@ export async function POST(req) {
       await connectMongo();
 
       const body = await req.json();
-
       const { id } = session.user;
 
+      // Get user and verify Stripe customer exists
       const user = await User.findById(id);
 
       if (!user?.customerId) {
@@ -33,6 +60,7 @@ export async function POST(req) {
         );
       }
 
+      // Create Stripe Customer Portal session
       const stripePortalUrl = await createCustomerPortal({
         customerId: user.customerId,
         returnUrl: body.returnUrl,
@@ -46,7 +74,7 @@ export async function POST(req) {
       return NextResponse.json({ error: e?.message }, { status: 500 });
     }
   } else {
-    // Not Signed in
+    // Handle unauthenticated access
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 }

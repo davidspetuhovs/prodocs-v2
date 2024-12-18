@@ -1,10 +1,40 @@
+/**
+ * Dashboard Page Component
+ * A protected page that requires authentication to access
+ * 
+ * Features:
+ * 1. Server-side rendering
+ * 2. Authentication protection via layout.js
+ * 3. Account management functionality
+ * 
+ * Configuration:
+ * - Uses force-dynamic to ensure fresh data on each request
+ * - Protected by layout.js authentication check
+ * 
+ * @example
+ * // Route: /dashboard
+ * // Access: Private (requires authentication)
+ * // Component hierarchy:
+ * // Dashboard
+ * // └── ButtonAccount
+ */
+
 import ButtonAccount from "@/components/ButtonAccount";
 
+// Force dynamic rendering to ensure fresh data
 export const dynamic = "force-dynamic";
 
-// This is a private page: It's protected by the layout.js component which ensures the user is authenticated.
-// It's a server compoment which means you can fetch data (like the user profile) before the page is rendered.
-// See https://shipfa.st/docs/tutorials/private-page
+/**
+ * Dashboard Component
+ * Main dashboard interface for authenticated users
+ * 
+ * Protected by:
+ * - layout.js authentication check
+ * - Server-side rendering for secure data fetching
+ * 
+ * @see https://shipfa.st/docs/tutorials/private-page
+ * @returns {Promise<JSX.Element>} Rendered dashboard page
+ */
 export default async function Dashboard() {
   return (
     <main className="min-h-screen p-8 pb-24">

@@ -9,22 +9,46 @@ import { findCheckoutSession } from "@/libs/stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-// This is where we receive Stripe webhook events
-// It used to update the user data, send emails, etc...
-// By default, it'll store the user in the database
-// See more: https://shipfa.st/docs/features/payments
+/**
+ * Handles Stripe webhook events for subscription and payment processing
+ * This endpoint receives events from Stripe and updates user access accordingly
+ * 
+ * @route POST /api/webhook/stripe
+ * @access Private - Only accessible by Stripe
+ * @security Requires Stripe signature verification
+ * 
+ * @example Webhook Event - Successful Subscription:
+ * {
+ *   "id": "evt_1234",
+ *   "type": "checkout.session.completed",
+ *   "data": {
+ *     "object": {
+ *       "id": "cs_test_1234",
+ *       "client_reference_id": "user_1234",
+ *       "customer": "cus_1234",
+ *       "line_items": {
+ *         "data": [{
+ *           "price": {
+ *             "id": "price_H5ggYwtDq4fbrJ"
+ *           }
+ *         }]
+ *       }
+ *     }
+ *   }
+ * }
+ */
 export async function POST(req) {
   await connectMongo();
 
+  // Get request body and Stripe signature
   const body = await req.text();
-
   const signature = headers().get("stripe-signature");
 
   let data;
   let eventType;
   let event;
 
-  // verify Stripe event is legit
+  // Verify webhook signature to ensure it's from Stripe
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
@@ -38,9 +62,12 @@ export async function POST(req) {
   try {
     switch (eventType) {
       case "checkout.session.completed": {
-        // First payment is successful and a subscription is created (if mode was set to "subscription" in ButtonCheckout)
-        // ✅ Grant access to the product
-
+        /**
+         * Handles successful checkout completion and subscription creation
+         * 1. Retrieves checkout session details
+         * 2. Gets or creates user based on customer information
+         * 3. Updates user with subscription details and grants access
+         */
         const session = await findCheckoutSession(data.object.id);
 
         const customerId = session?.customer;
@@ -54,10 +81,12 @@ export async function POST(req) {
 
         let user;
 
-        // Get or create the user. userId is normally pass in the checkout session (clientReferenceID) to identify the user when we get the webhook event
+        // User identification logic
         if (userId) {
+          // Case 1: User ID provided in checkout session
           user = await User.findById(userId);
         } else if (customer.email) {
+          // Case 2: Find or create user by customer email
           user = await User.findOne({ email: customer.email });
 
           if (!user) {
@@ -73,15 +102,19 @@ export async function POST(req) {
           throw new Error("No user found");
         }
 
-        // Update user data + Grant user access to your product. It's a boolean in the database, but could be a number of credits, etc...
+        // Update user subscription details and grant access
         user.priceId = priceId;
         user.customerId = customerId;
         user.hasAccess = true;
         await user.save();
 
-        // Extra: send email with user link, product page, etc...
+        // Optional: Send welcome/confirmation email
         // try {
-        //   await sendEmail({to: ...});
+        //   await sendEmail({
+        //     to: user.email,
+        //     subject: "Welcome to Premium!",
+        //     text: "Your subscription is now active..."
+        //   });
         // } catch (e) {
         //   console.error("Email issue:" + e?.message);
         // }
@@ -90,28 +123,39 @@ export async function POST(req) {
       }
 
       case "checkout.session.expired": {
-        // User didn't complete the transaction
-        // You don't need to do anything here, by you can send an email to the user to remind him to complete the transaction, for instance
+        /**
+         * Handles expired checkout sessions (incomplete purchases)
+         * Optional: Implement recovery email flow
+         * Example:
+         * 1. Get customer email from session
+         * 2. Send reminder email with new checkout link
+         */
         break;
       }
 
       case "customer.subscription.updated": {
-        // The customer might have changed the plan (higher or lower plan, cancel soon etc...)
-        // You don't need to do anything here, because Stripe will let us know when the subscription is canceled for good (at the end of the billing cycle) in the "customer.subscription.deleted" event
-        // You can update the user data to show a "Cancel soon" badge for instance
+        /**
+         * Handles subscription updates (plan changes, cancellation requests)
+         * Note: Actual cancellation is handled by customer.subscription.deleted
+         * Optional: Update user metadata for UI feedback
+         * Example: Add cancelAt date to user profile for "Canceling soon" badge
+         */
         break;
       }
 
       case "customer.subscription.deleted": {
-        // The customer subscription stopped
-        // ❌ Revoke access to the product
-        // The customer might have changed the plan (higher or lower plan, cancel soon etc...)
+        /**
+         * Handles subscription termination
+         * 1. Retrieves subscription details
+         * 2. Finds associated user
+         * 3. Revokes product access
+         */
         const subscription = await stripe.subscriptions.retrieve(
           data.object.id
         );
         const user = await User.findOne({ customerId: subscription.customer });
 
-        // Revoke access to your product
+        // Revoke product access
         user.hasAccess = false;
         await user.save();
 
@@ -119,34 +163,39 @@ export async function POST(req) {
       }
 
       case "invoice.paid": {
-        // Customer just paid an invoice (for instance, a recurring payment for a subscription)
-        // ✅ Grant access to the product
+        /**
+         * Handles successful recurring payments
+         * 1. Validates payment is for current subscription
+         * 2. Ensures continued product access
+         */
         const priceId = data.object.lines.data[0].price.id;
         const customerId = data.object.customer;
 
         const user = await User.findOne({ customerId });
 
-        // Make sure the invoice is for the same plan (priceId) the user subscribed to
+        // Verify payment matches user's subscription plan
         if (user.priceId !== priceId) break;
 
-        // Grant user access to your product. It's a boolean in the database, but could be a number of credits, etc...
+        // Maintain product access
         user.hasAccess = true;
         await user.save();
 
         break;
       }
 
-      case "invoice.payment_failed":
-        // A payment failed (for instance the customer does not have a valid payment method)
-        // ❌ Revoke access to the product
-        // ⏳ OR wait for the customer to pay (more friendly):
-        //      - Stripe will automatically email the customer (Smart Retries)
-        //      - We will receive a "customer.subscription.deleted" when all retries were made and the subscription has expired
-
+      case "invoice.payment_failed": {
+        /**
+         * Handles failed payments
+         * Note: By default, we let Stripe handle retries (Smart Retries)
+         * - Stripe automatically emails the customer
+         * - Subscription cancellation is handled by customer.subscription.deleted
+         * Optional: Implement custom retry logic or immediate access revocation
+         */
         break;
+      }
 
       default:
-      // Unhandled event type
+        // Unhandled event type
     }
   } catch (e) {
     console.error("stripe error: " + e.message + " | EVENT TYPE: " + eventType);

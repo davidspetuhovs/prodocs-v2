@@ -5,6 +5,32 @@ import connectMongo from "@/libs/mongoose";
 import Company from "@/models/Company";
 import User from "@/models/User";
 
+/**
+ * Creates a new company for a user
+ * 
+ * @route POST /api/company
+ * @access Private - Requires authentication
+ * 
+ * @example Request body:
+ * {
+ *   "name": "Acme Corporation",
+ *   "slug": "acme-corp"
+ * }
+ * 
+ * @example Successful response (201):
+ * {
+ *   "data": {
+ *     "_id": "507f1f77bcf86cd799439011",
+ *     "name": "Acme Corporation",
+ *     "slug": "acme-corp"
+ *   }
+ * }
+ * 
+ * @example Error response (400):
+ * {
+ *   "error": "Company name and slug are required"
+ * }
+ */
 export async function POST(req) {
   const session = await getServerSession(authOptions);
 
@@ -16,6 +42,7 @@ export async function POST(req) {
   const body = await req.json();
   const { name, slug } = body;
 
+  // Validate required fields in request body
   if (!name || !slug) {
     return NextResponse.json({ error: "Company name and slug are required" }, { status: 400 });
   }
@@ -23,12 +50,13 @@ export async function POST(req) {
   try {
     await connectMongo();
 
+    // Verify user exists in database
     const user = await User.findById(id);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if user already has a company
+    // Business logic validation: one company per user
     if (user.company) {
       return NextResponse.json(
         { error: "User already has a company" },
@@ -36,7 +64,7 @@ export async function POST(req) {
       );
     }
 
-    // Check if company with this slug already exists
+    // Business logic validation: unique slug requirement
     const existingCompany = await Company.findOne({ slug });
     if (existingCompany) {
       return NextResponse.json(
@@ -45,7 +73,7 @@ export async function POST(req) {
       );
     }
 
-    // Create new company
+    // Create and persist new company record
     const company = new Company({
       name,
       slug
@@ -53,7 +81,7 @@ export async function POST(req) {
 
     await company.save();
 
-    // Update user with company reference
+    // Associate company with user and save
     user.company = company._id;
     await user.save();
 
@@ -67,6 +95,31 @@ export async function POST(req) {
   }
 }
 
+/**
+ * Retrieves the authenticated user's company information
+ * 
+ * @route GET /api/company
+ * @access Private - Requires authentication
+ * 
+ * @example Successful response with company:
+ * {
+ *   "data": {
+ *     "_id": "507f1f77bcf86cd799439011",
+ *     "name": "Acme Corporation",
+ *     "slug": "acme-corp"
+ *   }
+ * }
+ * 
+ * @example Response when user has no company:
+ * {
+ *   "data": null
+ * }
+ * 
+ * @example Error response (401):
+ * {
+ *   "error": "Not signed in"
+ * }
+ */
 export async function GET() {
   const session = await getServerSession(authOptions);
 
@@ -76,8 +129,10 @@ export async function GET() {
 
   try {
     await connectMongo();
+    // Fetch user and populate the company reference
     const user = await User.findById(session.user.id).populate('company');
     
+    // Return null if user doesn't have a company
     if (!user?.company) {
       return NextResponse.json({ data: null });
     }

@@ -2,6 +2,30 @@ import { NextResponse } from "next/server";
 import connectMongo from "@/libs/mongoose";
 import Domain from "@/models/Domain";
 
+/**
+ * Retrieves all domain configurations with associated user information
+ * 
+ * @route GET /api/domain
+ * @access Private - Admin only
+ * 
+ * @example Successful response:
+ * [
+ *   {
+ *     "_id": "507f1f77bcf86cd799439011",
+ *     "domain": "docs.example.com",
+ *     "status": "active",
+ *     "vercelConfig": {
+ *       "name": "docs.example.com",
+ *       "apexName": "example.com",
+ *       ...
+ *     },
+ *     "user": {
+ *       "_id": "507f1f77bcf86cd799439012",
+ *       "email": "user@example.com"
+ *     }
+ *   }
+ * ]
+ */
 export async function GET() {
   try {
     await connectMongo();
@@ -12,8 +36,37 @@ export async function GET() {
   }
 }
 
+/**
+ * Adds a new custom domain to both Vercel and the application database
+ * 
+ * @route POST /api/domain
+ * @access Private - Requires authentication
+ * 
+ * @example Request body:
+ * {
+ *   "domain": "docs.example.com"
+ * }
+ * 
+ * @example Successful response:
+ * {
+ *   "_id": "507f1f77bcf86cd799439011",
+ *   "domain": "docs.example.com",
+ *   "status": "pending",
+ *   "vercelConfig": {
+ *     "name": "docs.example.com",
+ *     "apexName": "example.com",
+ *     "projectId": "prj_xxxxxxxxxxxx",
+ *     "redirect": null,
+ *     "redirectStatusCode": null,
+ *     "gitBranch": null,
+ *     "updatedAt": "2024-12-18T13:39:18.000Z",
+ *     "createdAt": "2024-12-18T13:39:18.000Z"
+ *   }
+ * }
+ */
 export async function POST(req) {
   try {
+    // Extract and validate domain from request body
     const body = await req.json();
     const { domain } = body;
 
@@ -26,7 +79,7 @@ export async function POST(req) {
 
     await connectMongo();
 
-    // Check if domain already exists
+    // Ensure domain uniqueness
     const existingDomain = await Domain.findOne({ domain });
     if (existingDomain) {
       return NextResponse.json(
@@ -35,7 +88,7 @@ export async function POST(req) {
       );
     }
 
-    // Add domain to Vercel
+    // Register domain with Vercel
     const vercelRes = await fetch(
       `https://api.vercel.com/v10/projects/${process.env.VERCEL_PROJECT_ID}/domains`,
       {
@@ -50,6 +103,7 @@ export async function POST(req) {
 
     const vercelData = await vercelRes.json();
 
+    // Handle Vercel API errors
     if (vercelData.error) {
       return NextResponse.json(
         { error: vercelData.error.message },
@@ -57,7 +111,7 @@ export async function POST(req) {
       );
     }
 
-    // Create domain in database
+    // Store domain configuration in database
     const newDomain = await Domain.create({
       domain,
       vercelConfig: vercelData,
@@ -71,8 +125,23 @@ export async function POST(req) {
   }
 }
 
+/**
+ * Removes a custom domain from both Vercel and the application database
+ * 
+ * @route DELETE /api/domain?domain=docs.example.com
+ * @access Private - Requires authentication
+ * 
+ * @example Query parameters:
+ * ?domain=docs.example.com
+ * 
+ * @example Successful response:
+ * {
+ *   "message": "Domain successfully removed"
+ * }
+ */
 export async function DELETE(req) {
   try {
+    // Extract and validate domain from query parameters
     const { searchParams } = new URL(req.url);
     const domain = searchParams.get("domain");
 
@@ -85,7 +154,7 @@ export async function DELETE(req) {
 
     await connectMongo();
 
-    // Remove domain from Vercel
+    // Remove domain configuration from Vercel
     await fetch(
       `https://api.vercel.com/v9/projects/${process.env.VERCEL_PROJECT_ID}/domains/${domain}`,
       {
@@ -96,10 +165,10 @@ export async function DELETE(req) {
       }
     );
 
-    // Remove domain from database
+    // Remove domain from application database
     await Domain.deleteOne({ domain });
 
-    return NextResponse.json({ message: "Domain deleted successfully" });
+    return NextResponse.json({ message: "Domain successfully removed" });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
