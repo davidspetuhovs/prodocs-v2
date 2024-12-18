@@ -17,11 +17,8 @@ export default function CategoriesPage() {
         const response = await apiClient.get("/public/docs");
         console.log('API Response:', response);
         
-        // The data is directly in response.data, not in response.data.data
-        const docsData = response.data || [];
-        console.log('Docs data to be set:', docsData);
-        
-        setDocs(docsData);
+        // response.data is already the array we need
+        setDocs(Array.isArray(response.data) ? response.data : []);
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching public docs:", error);
@@ -60,7 +57,7 @@ export default function CategoriesPage() {
         {docs.map((doc) => {
           console.log('Rendering doc:', doc);
           return (
-            <Link key={doc.id || doc._id} href={`/docs/${doc.slug}`}>
+            <Link key={doc.id} href={`/docs/${doc.slug}`}>
               <Card className="p-4 hover:shadow-lg transition-shadow">
                 <h2 className="font-semibold mb-2">{doc.title}</h2>
                 <div className="flex justify-between items-center text-sm text-muted-foreground">
