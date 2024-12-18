@@ -61,7 +61,7 @@ export async function GET(req) {
       status: 'published'
     })
       .sort({ updatedAt: -1 })
-      .select('title slug sections updatedAt');
+      .select('title slug updatedAt'); // Only select needed fields
 
     return NextResponse.json({ data: docs });
   } catch (error) {

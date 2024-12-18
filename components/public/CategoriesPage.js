@@ -13,10 +13,8 @@ export default function CategoriesPage() {
   useEffect(() => {
     const fetchPublicDocs = async () => {
       try {
-        console.log('Fetching public docs...');
         const response = await apiClient.get("/public/docs");
-        console.log('Public docs response:', response);
-        setDocs(response.data);
+        setDocs(response.data?.data || []);
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching public docs:", error);
@@ -52,8 +50,8 @@ export default function CategoriesPage() {
 
       {/* Documentation Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.isArray(docs) && docs.map((doc) => (
-          <Link key={doc.id || doc._id || doc.slug} href={`/docs/${doc.slug}`}>
+        {docs.map((doc) => (
+          <Link key={doc._id} href={`/docs/${doc.slug}`}>
             <Card className="p-4 hover:shadow-lg transition-shadow">
               <h2 className="font-semibold mb-2">{doc.title}</h2>
               <div className="flex justify-between items-center text-sm text-muted-foreground">
@@ -64,7 +62,7 @@ export default function CategoriesPage() {
         ))}
 
         {/* Empty state message */}
-        {(!docs || !Array.isArray(docs) || docs.length === 0) && (
+        {docs.length === 0 && (
           <div className="col-span-full text-center py-10 text-muted-foreground">
             No published documentation available.
           </div>
