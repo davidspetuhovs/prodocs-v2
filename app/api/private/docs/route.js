@@ -19,9 +19,10 @@ export async function GET() {
       company: session.user.company,
     })
       .sort({ updatedAt: -1 })
-      .select('title slug status updatedAt');
+      .select('_id title slug status updatedAt')
+      .lean();
 
-    return NextResponse.json({ data: docs });
+    return NextResponse.json(docs);
   } catch (error) {
     console.error('Error fetching private documentation:', error);
     return NextResponse.json(
@@ -88,7 +89,8 @@ export async function POST(req) {
       status: status || 'draft'
     });
 
-    return NextResponse.json({ data: doc }, { status: 201 });
+    console.log('Created document:', doc);
+    return NextResponse.json(doc, { status: 201 });
   } catch (error) {
     console.error('Error creating documentation:', error);
     return NextResponse.json(

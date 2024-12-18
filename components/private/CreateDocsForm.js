@@ -56,7 +56,7 @@ export default function CreateDocsForm() {
     try {
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-      const { data } = await apiClient.post("/private/docs", {
+      const response = await apiClient.post("/private/docs", {
         title,
         slug,
         sections,
@@ -68,7 +68,7 @@ export default function CreateDocsForm() {
         description: "Documentation created successfully",
       });
 
-      router.push(`/docs/${data.slug}`);
+      router.push(`/docs/${response.id}`);
     } catch (error) {
       setError(error.message);
     } finally {

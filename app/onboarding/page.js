@@ -20,7 +20,7 @@
  * // └── OnboardingForm
  */
 
-import { OnboardingForm } from "@/components/OnboardingForm"
+import { OnboardingForm } from "@/components/private/OnboardingForm"
 
 /**
  * LoginPage Component

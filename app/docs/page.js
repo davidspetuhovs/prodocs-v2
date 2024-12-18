@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 
-const PrivateDocsPage = dynamic(() => import('@/components/PrivateDocsPage'), { ssr: false });
+const CategoriesPage = dynamic(() => import('@/components/private/CategoriesPage'), { ssr: false });
 
 export default function Docs() {
-  return <PrivateDocsPage />;
+  return <CategoriesPage />;
 }

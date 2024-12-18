@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import apiClient from "@/libs/api";
 
-export default function PublicDocsPage() {
+export default function CategoriesPage() {
   const [docs, setDocs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);

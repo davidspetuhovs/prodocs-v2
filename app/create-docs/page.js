@@ -1,4 +1,4 @@
-import CreateDocsForm from "@/components/CreateDocsForm";
+import CreateDocsForm from "@/components/private/CreateDocsForm";
 
 export default function CreateDocsPage() {
   return (
