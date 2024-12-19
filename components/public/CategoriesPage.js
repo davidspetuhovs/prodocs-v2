@@ -52,7 +52,7 @@ export default function CategoriesPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {docs.map((doc) => {
           return (
-            <Link key={doc.id} href={`/docs/${doc.slug}`}>
+            <Link key={doc.id} href={`/${doc.slug}`}>
               <Card className="p-4 hover:shadow-lg transition-shadow">
                 <h2 className="font-semibold mb-2">{doc.title}</h2>
                 <div className="flex justify-between items-center text-sm text-muted-foreground">
