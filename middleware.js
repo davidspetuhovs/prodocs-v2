@@ -44,18 +44,26 @@ function extractCompanySlug(hostname, baseUrl) {
 }
 
 /**
+ * Checks if a path is a documentation route
+ * This helps us determine if we should include company slug in the path
+ */
+function isDocumentationRoute(pathname) {
+  // Add any other documentation-related paths here
+  return pathname !== '/' && !pathname.startsWith('/dashboard');
+}
+
+/**
  * Middleware Handler
  * Processes incoming requests and applies routing logic based on domain
  * 
  * Behavior:
  * 1. Main domain (qalileo.com) - Normal routing
- * 2. Subdomains (docs.company.com, company.qalileo.com) - Rewrite to /[companySlug]
- * 3. Custom domains (company.com) - Rewrite to /[companySlug]
+ * 2. Documentation routes - Direct path without company slug
+ * 3. Other routes - Include company slug in path
  * 
  * @example
- * docs.printify.com/getting-started -> /printify/getting-started
- * printify.qalileo.com/getting-started -> /printify/getting-started
- * printify.com/getting-started -> /printify/getting-started
+ * docs.printify.com/getting-started -> /getting-started
+ * docs.printify.com/dashboard -> /printify/dashboard
  * 
  * @param {Request} req - Incoming request object
  * @returns {NextResponse} Response with appropriate routing
@@ -83,8 +91,20 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // For custom domains and subdomains:
-  // Rewrite paths to include company slug
+  // For documentation routes, don't include company in path
+  if (isDocumentationRoute(pathname)) {
+    // Add company context via header for API routes
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-company-slug', companySlug);
+    
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  }
+
+  // For other routes (dashboard, etc), include company in path
   const newUrl = new URL(req.url);
   newUrl.pathname = pathname === '/' 
     ? `/${companySlug}` 
