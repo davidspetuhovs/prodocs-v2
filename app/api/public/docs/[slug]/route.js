@@ -47,11 +47,14 @@ export async function GET(req, { params }) {
     console.log('Public API: Searching for document with slug:', slug);
     
     const doc = await Documentation.findOne(
-      { slug },
+      { 
+        slug,
+        status: 'published'  // Only return published documents
+      },
       { title: 1, slug: 1, sections: 1, _id: 0 }
     );
 
-    console.log('Public API: Document found:', doc ? 'Yes' : 'No');
+    console.log('Public API: Document found:', doc ? 'Yes' : 'No', doc ? `(title: ${doc.title})` : '');
 
     if (!doc) {
       console.log('Public API: Document not found, returning 404');

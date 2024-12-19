@@ -25,7 +25,8 @@ export default function DocumentationPage() {
 
       try {
         console.log('DocumentationPage: Fetching document with slug:', params.slug);
-        const response = await apiClient.get(`/api/public/docs/${params.slug}`);
+        // Remove the /api prefix since it's already included in apiClient configuration
+        const response = await apiClient.get(`/public/docs/${params.slug}`);
         console.log('DocumentationPage: API Response:', response);
         
         if (!mounted) {
@@ -33,11 +34,11 @@ export default function DocumentationPage() {
           return;
         }
 
-        if (response?.data) {
-          console.log('DocumentationPage: Setting document data');
-          setDoc(response.data);
+        if (response?.data?.data) {
+          console.log('DocumentationPage: Setting document data:', response.data.data);
+          setDoc(response.data.data);
         } else {
-          console.log('DocumentationPage: Invalid response format');
+          console.log('DocumentationPage: Invalid response format:', response);
           setError('Invalid response format');
         }
       } catch (err) {
