@@ -34,9 +34,9 @@ export default function DocumentationPage() {
           return;
         }
 
-        if (response?.data?.data) {
-          console.log('DocumentationPage: Setting document data:', response.data.data);
-          setDoc(response.data.data);
+        if (response?.data) {
+          console.log('DocumentationPage: Setting document data:', response.data);
+          setDoc(response.data);
         } else {
           console.log('DocumentationPage: Invalid response format:', response);
           setError('Invalid response format');
