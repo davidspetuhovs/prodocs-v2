@@ -21,21 +21,41 @@ export const config = {
 };
 
 /**
+ * Extracts company slug from hostname
+ * 
+ * @example
+ * docs.printify.com -> printify
+ * printify.qalileo.com -> printify
+ * printify.com -> printify
+ */
+function extractCompanySlug(hostname, baseUrl) {
+  // Handle docs subdomain (e.g., docs.printify.com)
+  if (hostname.startsWith('docs.')) {
+    return hostname.replace('docs.', '').split('.')[0];
+  }
+  
+  // Handle qalileo subdomain (e.g., printify.qalileo.com)
+  if (hostname.includes(baseUrl)) {
+    return hostname.replace(`.${baseUrl}`, '');
+  }
+  
+  // Handle custom domain (e.g., printify.com)
+  return hostname.split('.')[0];
+}
+
+/**
  * Middleware Handler
  * Processes incoming requests and applies routing logic based on domain
  * 
  * Behavior:
  * 1. Main domain (qalileo.com) - Normal routing
- * 2. Subdomains/Custom domains - Internally rewrite paths to /public
+ * 2. Subdomains (docs.company.com, company.qalileo.com) - Rewrite to /[companySlug]
+ * 3. Custom domains (company.com) - Rewrite to /[companySlug]
  * 
  * @example
- * Main domain:
- * qalileo.com/ -> Shows landing page
- * qalileo.com/docs -> Shows docs page
- * 
- * Subdomain/Custom domain:
- * docs.example.com/ -> Internally rewrites to /public
- * docs.example.com/docs -> Internally rewrites to /public/docs
+ * docs.printify.com/getting-started -> /printify/getting-started
+ * printify.qalileo.com/getting-started -> /printify/getting-started
+ * printify.com/getting-started -> /printify/getting-started
  * 
  * @param {Request} req - Incoming request object
  * @returns {NextResponse} Response with appropriate routing
@@ -55,10 +75,20 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
+  // Extract company slug from hostname
+  const companySlug = extractCompanySlug(hostname, baseUrl);
+  
+  // Skip rewrite if we're already on a company route
+  if (pathname.startsWith(`/${companySlug}`)) {
+    return NextResponse.next();
+  }
+
   // For custom domains and subdomains:
-  // Internally rewrite all paths to their /public equivalent
+  // Rewrite paths to include company slug
   const newUrl = new URL(req.url);
-  newUrl.pathname = pathname === '/' ? '/public' : `/public${pathname}`;
+  newUrl.pathname = pathname === '/' 
+    ? `/${companySlug}` 
+    : `/${companySlug}${pathname}`;
   
   return NextResponse.rewrite(newUrl);
 }

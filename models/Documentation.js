@@ -33,7 +33,6 @@ const documentationSchema = mongoose.Schema(
     slug: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       lowercase: true,
     },
@@ -64,6 +63,11 @@ const documentationSchema = mongoose.Schema(
 // Add toJSON plugin
 documentationSchema.plugin(toJSON);
 sectionSchema.plugin(toJSON);
+
+// Drop any existing indexes to ensure clean state
+documentationSchema.indexes().forEach(index => {
+  documentationSchema.index(index[0], { ...index[1], unique: false });
+});
 
 // Create compound index for company and slug to ensure unique slugs within a company
 documentationSchema.index({ company: 1, slug: 1 }, { unique: true });
