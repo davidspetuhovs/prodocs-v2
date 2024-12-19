@@ -53,20 +53,6 @@ function isDocumentationRoute(pathname) {
 }
 
 /**
- * Removes company slug from path if present
- * 
- * @example
- * /company/docs -> /docs
- * /company/getting-started -> /getting-started
- */
-function removeCompanyFromPath(pathname, companySlug) {
-  if (pathname.startsWith(`/${companySlug}/`)) {
-    return pathname.replace(`/${companySlug}`, '');
-  }
-  return pathname;
-}
-
-/**
  * Middleware Handler
  * Processes incoming requests and applies routing logic based on domain
  * 
@@ -85,7 +71,7 @@ function removeCompanyFromPath(pathname, companySlug) {
 export async function middleware(req) {
   const hostname = req.headers.get("host");
   const url = new URL(req.url);
-  let { pathname } = url;
+  const { pathname } = url;
   
   // Determine base URL based on environment
   const baseUrl = process.env.NODE_ENV === 'production' 
@@ -99,24 +85,17 @@ export async function middleware(req) {
 
   // Extract company slug from hostname
   const companySlug = extractCompanySlug(hostname, baseUrl);
+  
+  // Skip rewrite if we're already on a company route
+  if (pathname.startsWith(`/${companySlug}`)) {
+    return NextResponse.next();
+  }
 
-  // For documentation routes, remove company from path if present
+  // For documentation routes, don't include company in path
   if (isDocumentationRoute(pathname)) {
-    // Remove company slug from path if it exists
-    pathname = removeCompanyFromPath(pathname, companySlug);
-    
     // Add company context via header for API routes
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-company-slug', companySlug);
-    
-    // Rewrite URL if we removed company slug
-    if (pathname !== url.pathname) {
-      const newUrl = new URL(req.url);
-      newUrl.pathname = pathname;
-      return NextResponse.rewrite(newUrl, {
-        request: { headers: requestHeaders },
-      });
-    }
     
     return NextResponse.next({
       request: {
@@ -129,7 +108,7 @@ export async function middleware(req) {
   const newUrl = new URL(req.url);
   newUrl.pathname = pathname === '/' 
     ? `/${companySlug}` 
-    : `/${companySlug}${removeCompanyFromPath(pathname, companySlug)}`;
+    : `/${companySlug}${pathname}`;
   
   return NextResponse.rewrite(newUrl);
 }
