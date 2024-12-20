@@ -1,21 +1,18 @@
 /**
  * Next.js Middleware Configuration
  * Handles routing logic for main domain, subdomains, and custom domains
- * 
- * Key Features:
- * 1. Path matching configuration
- * 2. Domain-based routing
- * 3. Internal path rewriting for custom domains
  */
 
 import { NextResponse } from "next/server";
 
-/**
- * Middleware Configuration
- * Defines which paths should be processed by the middleware
- */
 export const config = {
   matcher: [
+    /*
+     * Match all paths except for:
+     * 1. /api routes
+     * 2. /_next (Next.js internals)
+     * 3. /static (public files)
+     */
     "/((?!api|_next|static|[\\w-]+\\.\\w+).*)",
   ],
 };
@@ -44,29 +41,15 @@ function extractCompanySlug(hostname, baseUrl) {
 }
 
 /**
- * Checks if a path is a documentation route
- * This helps us determine if we should include company slug in the path
- */
-function isDocumentationRoute(pathname) {
-  // Add any other documentation-related paths here
-  return pathname !== '/' && !pathname.startsWith('/dashboard');
-}
-
-/**
  * Middleware Handler
- * Processes incoming requests and applies routing logic based on domain
  * 
  * Behavior:
  * 1. Main domain (qalileo.com) - Normal routing
- * 2. Documentation routes - Direct path without company slug
- * 3. Other routes - Include company slug in path
+ * 2. Subdomains - Rewrite to include company in path
  * 
  * @example
- * docs.printify.com/getting-started -> /getting-started
+ * docs.printify.com/getting-started -> /printify/getting-started
  * docs.printify.com/dashboard -> /printify/dashboard
- * 
- * @param {Request} req - Incoming request object
- * @returns {NextResponse} Response with appropriate routing
  */
 export async function middleware(req) {
   const hostname = req.headers.get("host");
@@ -86,29 +69,24 @@ export async function middleware(req) {
   // Extract company slug from hostname
   const companySlug = extractCompanySlug(hostname, baseUrl);
   
-  // Skip rewrite if we're already on a company route
+  // Skip if already contains company slug
   if (pathname.startsWith(`/${companySlug}`)) {
     return NextResponse.next();
   }
 
-  // For documentation routes, don't include company in path
-  if (isDocumentationRoute(pathname)) {
-    // Add company context via header for API routes
-    const requestHeaders = new Headers(req.headers);
-    requestHeaders.set('x-company-slug', companySlug);
-    
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
-  }
+  // Add company context via header for API routes
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-company-slug', companySlug);
 
-  // For other routes (dashboard, etc), include company in path
+  // Rewrite URL to include company slug
   const newUrl = new URL(req.url);
   newUrl.pathname = pathname === '/' 
     ? `/${companySlug}` 
     : `/${companySlug}${pathname}`;
   
-  return NextResponse.rewrite(newUrl);
+  return NextResponse.rewrite(newUrl, {
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
