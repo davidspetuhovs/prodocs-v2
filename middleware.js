@@ -45,11 +45,11 @@ function extractCompanySlug(hostname, baseUrl) {
  * 
  * Behavior:
  * 1. Main domain (qalileo.com) - Normal routing
- * 2. Subdomains - Rewrite to include company in path
+ * 2. Subdomains - Clean URLs externally, internal rewrites for routing
  * 
  * @example
- * docs.printify.com/getting-started -> /printify/getting-started
- * docs.printify.com/dashboard -> /printify/dashboard
+ * External: forgepad.qalileo.com/test
+ * Internal: /forgepad/test (for Next.js routing)
  */
 export async function middleware(req) {
   const hostname = req.headers.get("host");
@@ -69,20 +69,24 @@ export async function middleware(req) {
   // Extract company slug from hostname
   const companySlug = extractCompanySlug(hostname, baseUrl);
   
-  // Skip if already contains company slug
-  if (pathname.startsWith(`/${companySlug}`)) {
-    return NextResponse.next();
-  }
-
   // Add company context via header for API routes
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-company-slug', companySlug);
 
-  // Rewrite URL to include company slug
+  // Get path segments and remove company slug if it's the first segment
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] === companySlug) {
+    // If URL contains company slug, redirect to clean URL
+    const cleanUrl = new URL(req.url);
+    cleanUrl.pathname = `/${segments.slice(1).join('/')}`;
+    return NextResponse.redirect(cleanUrl);
+  }
+
+  // Internally rewrite to include company slug for Next.js routing
   const newUrl = new URL(req.url);
-  newUrl.pathname = pathname === '/' 
-    ? `/${companySlug}` 
-    : `/${companySlug}${pathname}`;
+  newUrl.pathname = segments.length 
+    ? `/${companySlug}/${segments.join('/')}` 
+    : `/${companySlug}`;
   
   return NextResponse.rewrite(newUrl, {
     request: {
