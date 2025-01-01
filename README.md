@@ -1,35 +1,113 @@
-# ShipFast — Javascript
+# ProDocs v2
 
-Hey maker 👋 it's Marc from [ShipFast](https://shipfa.st/docs). Let's get your startup off the ground, FAST ⚡️
+A modern documentation platform built with Next.js 14, featuring multi-tenancy support through subdomains and custom domains.
 
-<sub>**Watch/Star the repo to be notified when updates are pushed**</sub>
+## Features
 
-## Get Started
+- **Multi-tenant Architecture**
+  - Subdomain support (e.g., company.qalileo.com)
+  - Custom domain support
+  - Company-specific workspaces
+- **Authentication & Authorization**
+  - Secure user authentication
+  - Role-based access control
+  - Protected API routes
+- **Modern UI/UX**
+  - Responsive design
+  - Dark/light mode support
+  - Interactive components
+- **Performance**
+  - Server-side rendering
+  - Optimized routing
+  - Fast page transitions
 
-1. Follow the [Get Started Tutorial](https://shipfa.st/docs) to clone the repo and run your local server 💻
+## Project Structure
 
-<sub>**Looking for the /pages router version?** Use this [documentation](https://shipfa.st/docs-old) instead</sub>
+```
+├── app/                    # Next.js 14 app directory
+│   ├── [companySlug]/     # Dynamic company routes
+│   ├── api/               # API routes
+│   ├── dashboard/         # Dashboard pages
+│   ├── onboarding/       # Onboarding flow
+│   └── create-docs/      # Documentation creation
+├── components/            # React components
+│   ├── business/         # Business logic components
+│   ├── private/          # Protected components
+│   └── ui/               # Reusable UI components
+├── libs/                  # Utility functions
+├── models/               # Database models
+└── middleware.js         # Routing & auth middleware
+```
 
-2. Follow the [Ship In 5 Minutes Tutorial](https://shipfa.st/docs/tutorials/ship-in-5-minutes) to learn the foundation and ship your app quickly ⚡️
+## Key Components
 
-## Links
+### Middleware
+- Handles subdomain routing
+- Manages custom domain resolution
+- Processes authentication state
 
--   [📚 Documentation](https://shipfa.st/docs)
--   [📣 Updates](https://shipfast.beehiiv.com/)
--   [🧑‍💻 Discord](https://shipfa.st/dashboard)
--   [🥇 Leaderboard](https://shipfa.st/leaderboard)
+### API Routes
+- Company management
+- User authentication
+- Documentation CRUD operations
 
-## Support
+### Core Components
+- `OnboardingForm`: Company creation and setup
+- `Header`: Navigation and user controls
+- `LayoutClient`: Client-side layout wrapper
 
-Reach out at marc@shipfa.st
+## Getting Started
 
-\_
+1. **Prerequisites**
+   - Node.js 18+
+   - MongoDB database
+   - npm or yarn
 
-Let's ship it, FAST ⚡️
+2. **Environment Setup**
+   ```bash
+   cp .env.example .env.local
+   ```
+   Configure your environment variables.
 
-P.S.
+3. **Installation**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
--   Want to showcase your startups? Get your [Indie Page](https://indiepa.ge?ref=shipfast_readme) and share your entrepreneur's journey. Join 3,132 founders ⭐️
--   Don't get banned from Stripe for 1 dispute. Use [ByeDispute](https://byedispute.com/?ref=shipfast_readme) to prevent them from happenening 🛡️
--   Make your launch go viral and get your first customers with [LaunchViral](https://launchvir.al/?ref=shipfast_readme) 🚀
--   Stop paying 0.4% per Stripe invoices [Zenvoice](https://zenvoice.io/?ref=shipfast_readme) 🤕
+4. **Development**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+5. **Production**
+   ```bash
+   npm run build
+   npm start
+   # or
+   yarn build
+   yarn start
+   ```
+
+## Configuration
+
+Key configuration options are available in `config/index.js`:
+- Authentication settings
+- API endpoints
+- Feature flags
+- Theme configuration
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is proprietary software. All rights reserved.
