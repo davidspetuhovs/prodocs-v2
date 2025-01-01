@@ -26,7 +26,7 @@ export default function OnboardingForm({
     setIsLoading(true)
 
     try {
-      const { data } = await apiClient.post("/api/company", {
+      const { data } = await apiClient.post("/company", {
         name: formData.name,
         slug: formData.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       });
@@ -34,7 +34,7 @@ export default function OnboardingForm({
       toast.success("Company created successfully!")
       router.push(`/dashboard`)
     } catch (error) {
-      toast.error(error.message || "Something went wrong")
+      toast.error(error?.response?.data?.error || error.message || "Something went wrong")
     } finally {
       setIsLoading(false)
     }
