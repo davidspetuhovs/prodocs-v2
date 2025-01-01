@@ -63,12 +63,25 @@ export default function CreateDocsForm() {
         status
       });
 
+      console.log('API Response:', response);
+      console.log('Company Slug:', response?.company?.slug);
+      console.log('Doc Slug:', response?.slug);
+
       toast({
         title: "Success",
         description: "Documentation created successfully",
       });
 
-      router.push(`/docs/${response.id}`);
+      const companySlug = response?.company?.slug;
+      const docSlug = response?.slug;
+
+      if (!companySlug || !docSlug) {
+        console.error('Missing slugs:', { companySlug, docSlug, response });
+        setError('Failed to get proper routing information');
+        return;
+      }
+
+      router.push(`/${companySlug}/${docSlug}`);
     } catch (error) {
       setError(error.message);
     } finally {
